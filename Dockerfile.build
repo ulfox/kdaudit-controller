@@ -1,0 +1,15 @@
+FROM golang:1.16-alpine as build
+RUN apk add --update --no-cache bash \
+    ca-certificates \
+    git \
+    tzdata \
+    gcc
+
+RUN mkdir -p /kdaudit
+WORKDIR /kdaudit
+
+COPY go.mod /kdaudit/
+RUN go mod download
+
+COPY . /kdaudit/
+RUN go build -tags='dev' -o /usr/bin/kdaudit  /kdaudit/main.go

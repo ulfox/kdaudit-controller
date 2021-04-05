@@ -1,0 +1,13 @@
+FROM alpine:3.9
+
+RUN mkdir -p /opt/kdaudit
+WORKDIR /opt/kdaudit
+
+COPY --from=local/build-kdaudit /usr/share/zoneinfo/ /usr/share/zoneinfo/
+COPY --from=local/build-kdaudit /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=local/build-kdaudit /usr/bin/kdaudit /opt/kdaudit/kdaudit
+
+RUN ln -sf /opt/kdaudit/kdaudit /usr/bin/kdaudit
+
+ENTRYPOINT ["/usr/bin/kdaudit"]
+

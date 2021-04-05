@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kdaudit
+  labels:
+    app: kdaudit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kdaudit
+  template:
+    metadata:
+      labels:
+        app: kdaudit
+    spec:
+      serviceAccount: kdaudit
+      containers:
+        - name: kdaudit
+          image: local/kdaudit
+          imagePullPolicy: Never
