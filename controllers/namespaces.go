@@ -67,24 +67,18 @@ func (c *NSController) HasSynced() bool {
 func (c *NSController) runWorker() {
 	for !c.exit {
 		if (*c.queueUpdate).Len() > 0 {
-			processQueue("update", &c.informer, c.queueUpdate, c.logger, c.handler, c.client, c.cfgLabelsWatcher, c.slackWebhook)
+			c.processQueue("update", c.queueUpdate)
 		} else if (*c.queueAdd).Len() > 0 {
-			processQueue("add", &c.informer, c.queueAdd, c.logger, c.handler, c.client, c.cfgLabelsWatcher, c.slackWebhook)
+			c.processQueue("add", c.queueAdd)
 		} else if (*c.queueDelete).Len() > 0 {
-			processQueue("delete", &c.informer, c.queueDelete, c.logger, c.handler, c.client, c.cfgLabelsWatcher, c.slackWebhook)
+			c.processQueue("delete", c.queueDelete)
 		}
 	}
 }
 
-func processQueue(
+func (c *NSController) processQueue(
 	t string,
-	i *cache.SharedIndexInformer,
 	q *workqueue.RateLimitingInterface,
-	l *logrus.Logger,
-	h handlers.Handler,
-	c kubernetes.Interface,
-	cfg map[string]interface{},
-	slackWebhook string,
 ) {
 
 	key, quit := (*q).Get()
@@ -94,21 +88,21 @@ func processQueue(
 
 	defer (*q).Done(key)
 
-	item, _, err := (*i).GetIndexer().GetByKey(key.(string))
+	item, _, err := c.informer.GetIndexer().GetByKey(key.(string))
 	if err != nil && item != nil {
 		if (*q).NumRequeues(key) < 5 {
-			l.Errorf("NSController.processQueue: Failed getting key %s with error %v, retrying", key, err)
+			c.logger.Errorf("NSController.processQueue: Failed getting key %s with error %v, retrying", key, err)
 			(*q).AddRateLimited(key)
 		} else {
-			l.Errorf("NSController.processQueue: Timedount trying to get %s", key)
+			c.logger.Errorf("NSController.processQueue: Timedount trying to get %s", key)
 			(*q).Forget(key)
 			runtime.HandleError(err)
 		}
 	} else if item == nil {
-		l.Debugf("NSController.processQueue: Got empty item using key %s. Skipping", key)
+		c.logger.Debugf("NSController.processQueue: Got empty item using key %s. Skipping", key)
 		(*q).Forget(key)
 		return
 	}
-	h.ObjectHandler(t, item, cfg, slackWebhook)
+	c.handler.ObjectHandler(t, item, c.cfgLabelsWatcher, c.slackWebhook)
 	(*q).Forget(key)
 }
